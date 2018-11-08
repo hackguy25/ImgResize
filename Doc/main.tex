@@ -2,7 +2,7 @@
 % nalogah, katere nosilec je Blaž Zupan in je dostopna na spletni učilnici
 % predmeta UOZP.
 
-\documentclass[a4paper,11pt,titlepage]{article}
+\documentclass[a4paper,11pt]{article}
 \usepackage{a4wide}
 \usepackage{fullpage}
 \usepackage[utf8x]{inputenc}
@@ -29,7 +29,7 @@ basicstyle=\ttfamily\footnotesize\setstretch{1},
 backgroundcolor=\color{light-gray},
 }
 
-\title{Strojno učenje za boljšo povečavo slik}
+\title{\textbf{Strojno učenje za boljšo povečavo slik}}
 \author{Blaž Rojc}
 \date{\today}
 
@@ -50,7 +50,7 @@ S ciljem boljše povečave slik sem ustvaril konvolucijsko nevronsko mrežo, ki 
 V tem besedilu bom predstavil delovanje nevronske mreže, njeno obliko, programsko okolje, ki sem ga uporabil, in množico slik, uporabljeno
 	pri treniranju in preizkušanju mreže.
 
-Pri načrtovanju mreže sem se usmerjal po raziskavah s podobnim namenom. \cite{intel1, intel2, intel3}
+Pri načrtovanju mreže sem se usmerjal po raziskavah s podobnim namenom.\cite{intel1, intel2, intel3}
 V večini primerov je šlo za večslojne nevronske mreže, jaz sem se pa omejil na en sloj s knovolucijo.
 
 Rezultati so sprejemljivi, mreža je zmožna očitno izboljšati kvaliteto slike v primerjavi z linearno interpolacijo samo.
@@ -163,8 +163,8 @@ Poleg tega za doseganje dobrih rezultatov zahtevajo ogromne, raznolike učne mno
 \emph{Konvolucijske nevronske mreže} so eden izmed tipov usmerjenih nevronskih mrež.
 Navadno so sestavljene iz več slojev, kjer so posamezni sloji konvolucije, aktivacijske funkcije, združevalne funkcije ali
 	\emph{polno povezani sloji} - sloji, pri katerih je vsak nevron vhoda uteženo povezan z vsakim nevronom izhoda.
-Konvolucije emulirajo odziv nevronov na lastnosti vhodnih stimulusov,\cite{cnn_conv} podobno kot ljudje bel krog na temnem ozadju zaznamo kot
-	vir svetlobe.
+Konvolucije emulirajo odziv nevronov na lastnosti vhodnih stimulusov, podobno kot ljudje bel krog na temnem ozadju zaznamo kot
+	vir svetlobe.\cite{cnn_conv}
 Združevalne funkcije, kot so max$(A)$, min$(A)$ in avg$(A)$ zmanjšajo količino vmesnih podatkov, kar poenostavi proces učenja.\cite{cnn_pool}
 
 Pravilno načrtovane konvolucijske nevronske mreže potrebujejo relativno malo preprocesnega dela, kar omogoča hiter in enostaven razvoj programov,
@@ -185,14 +185,16 @@ clamp(x) = \begin{cases}
 	0 & \text{za } x < 0
 \end{cases}.
 \end{equation*}
-Tu nelinearnost aktivacijske funkcije ne igra posebne vloge, pomaga pa omejiti izhodno vrednost v dopustno območje, ki ga lahko shranimo kot 1 bajt.
+Tu nelinearnost aktivacijske funkcije ne igra posebne vloge, pomaga pa omejiti izhodno vrednost v dopustno območje števil, ki jih lahko zaokrožimo v
+	8-bitno celo število.
 Za vhod vzame povečano sliko dimenzij $(\text{širina}, \text{višina})$, vrne pa sliko dimenzij $(\text{širina} - k + 1, \text{višina} - k + 1)$.
+Vse računanje poteka v številih s plavajočo vejico v enojni natančnosti, \texttt{float32}.
 
 \subsection{Oblika podatkov}
 
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[scale=0.25]{picture_samples.jpg}
+\includegraphics[scale=0.285]{picture_samples.jpg}
 \caption{Primeri slik iz množice vhodnih podatkov.}
 \label{slika1}
 \end{center}
@@ -218,15 +220,67 @@ Vsa izvorna koda je dosegljiva na javnem repozitoriju na naslovu \url{https://gi
 
 \section{Učenje}
 
-TO DO
+Mrežo sem učil s pomočjo skripte \texttt{train.py}.
+Vsako sliko sem naložil z diska, skrčil s faktorjem 4, povečal s faktorjem 4 z linearno interpolacijo in jo skupaj z originalom podal mreži.
+Ta je na grafični kartici izvedla učni korak z učno hitrostjo $lr$ in vrnila napako pri trenutni sliki.
+To napako sem izpisal na standardnem izhodu za lažje sledenje napredku.
 
-\section{Rezultati}
+Učenje sem izvajal v iteracijah.
+V vsaki iteraciji sem na mreži izvedel en korak z vsako izmed 580 slik iz učne množice.
+Po vsaki iteraciji sem zmanjšal hitrost učenja, $lr$, tako da so posamezne slike le minimalno pripomogle k neželenemu odstopanju.
 
-TO DO
+Vse učenje sem izvajal na mojem osebnem računalniku s procesorjem AMD Ryzen Threadripper
+	1920X,\footnote{\url{https://www.amd.com/en/products/cpu/amd-ryzen-threadripper-1920x}}
+	32GB pomnilnika in grafično kartico Nvidia 1080 Ti.\footnote{\url{https://www.nvidia.com/en-gb/geforce/products/10series/geforce-gtx-1080-ti/}}
+
+Ker je pretvorba slik potrošila veliko več časa kot samo učenje, sem postopek paraleliziral s pomočjo Pythonovega modula \texttt{multiprocessing}.
+V vsakem koraku sem naenkrat pretvoril 12 slik, vsako v svojem procesu, in izvedel učenje na 12 slikah iz prejšnjega koraka.
+Tako sem dosegel do 90\% povprečno izkoriščenost procesorja in 60\% povprečno izkoriščenost grafične kartice tekom postopka učenja.
+
+Ustvaril sem dve različici mreže, ki se razlikujeta le v jedru konvolucije in času učenja.
+
+Prva različica ima jedro velikosti $17 * 17$, učenje pa je potekalo v 15 iteracijah, kjer je bila hitrost učenja v $i$-ti iteraciji podana tako:
+\begin{equation*} 
+lr = 0.00001 \cdot 0,33^{i - 1}
+\end{equation*}
+
+Druga različica ima jedro velikosti $25 * 25$, učenje pa je potekalo v 30 iteracijah, kjer je bila hitrost učenja v $i$-ti iteraciji podana tako:
+\begin{equation*} 
+lr = 0.00001 \cdot 0,85^{i - 1}
+\end{equation*}
+
+Kljub večjemu jedru konvolucije druge različice učenje ni potekalo občutno počasneje.
+Pri obeh različicah sem za izvedbo ene iteracije potreboval povprečno 12 minut.
+Za učenje prve različice sem porabil približno 3 ure, za učenje druge pa približno 6.
+Povprečna poraba energije računalnika med učenjem je nihala med 400 in 450W, torej sem za učenje obeh različic porabil nekje med 3,5 in 4 kWh električne
+	energije.
+
+\section{Testiranje}
+
+Obe različici mreže sem testiral na 64 slikah iz testne množice.
+Slike sem predhodno skrčil na četrtino velikosti v vsako dimenzijo, nato pa jih obdelal z obema različicama mreže.
+Naslednje slika prikazuje nekaj primerov povečanih slik, v primerjavi z bilinearno in bikubično interpolacijo.
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[scale=0.231]{picture_comparison.jpg}
+\caption{Primeri slik iz množice vhodnih podatkov, z leve: bilinearno, bikubično, konvolucija $17 * 17$, konvolucija $25 * 25$, izvorna slika}
+\label{slika1}
+\end{center}
+\end{figure}
 
 \section{Zaključek}
 
-TO DO
+Povečava slik z mrežo se od povečave z eno izmed obstoječih interpolacij najbolj razlikuje večinoma v tem, da mreža ne ohranja toliko ostrine kot 
+	interpolacija, ampak veliko bolje ohranja obliko ostrih prehodov svetlosti.
+
+Najbolj pozitivno bi na kvaliteto izhodnih slik vplivala večja učna množica, 580 slik ni veliko v primerjavi s prosto dostopnimi nabori
+	slik.\cite{datasets}
+Lahko bi tudi povečal število učnih iteracij, ampak že pri zadnjih iteracijah obstoječega učnega postopka so bile razlike minimalne.
+Uporabil bi lahko tudi večja jedra konvolucije, ampak glede na relativno majhno razliko med različicama menim, da pridobitek ne bi upravičil dodatne
+	kompleksnosti.
+
+Kljub tem pomanjkljivostim mislim, da je bila izdelava mreže uspeh.
 
 \begin{thebibliography}{99}
 
@@ -269,129 +323,8 @@ TO DO
 \bibitem{cnn_pool} Alex Krizhevsky \emph{et al}. (2012). ImageNet Classification with Deep Convolutional Neural Networks.
 	\emph{NIPS 2012}. [Online] Dosegljivo: \url{http://www.image-net.org/challenges/LSVRC/2012/supervision.pdf}. [Dostopano \today].
 
+\bibitem{datasets} \emph{Datasets}. Deep Learning. [Online] Dosegljivo: \url{http://deeplearning.net/datasets/}. [Dostopano \today].
+
 \end{thebibliography}
 
 \end{document}
-
-% od predloge
-
-\section{Uvod.}
-V tem razdelku, ki naj bo kratek in naj obsega en odstavek z do 150
-besed, na kratko opišeš, kaj je bil cilj naloge.
-
-\subsection{Podatki.}
-Če je naloga zasnovana tako, da vključuje analizo izbranih podatkov, v
-tem razdelku opišeš, kakšni so ti podatki in navedeš nekaj osnovnih
-statističnih lastnosti teh podatkov. Slednje vključujejo velikost
-podatkov (na primer število primerov, število in vrsto atributov), delež
-manjkajočih podatkov, opis in porazdelitev vrednosti ciljnih
-spremenljivk, in podobno. Če si podatke pridobil sam, tu opišeš, na
-kakšen način, kje in kako.
-
-\section{Metode.}
-Tu opišeš, na kakšen način si rešil nalogo (tehnike in metode, ki si
-jih uporabil). Lahko vključiš tudi zanimiv del programske kode, ki
-si jo morda pri tem razvil ali pa v poročilo dodatno vključiš sliko,
-kot je na primer slika. Vse slike in tabele, ki jih
-vključiš v poročilo, morajo biti navedene v besedilu oziroma se moraš
-na njih sklicati.
-
-\begin{figure}[htbp]
-\begin{center}
-%\includegraphics[scale=0.3]{slika-primer.png}
-\caption{Vsako sliko opremi s podnapisom, ki pove, kaj slika prikazuje.}
-%\label{slika1}
-\end{center}
-\end{figure}
-
-V to poglavje lahko tudi vključiš kakšen metodološko zanimiv del
-kode. Primer vključitve kode oziroma implementirane funkcije v
-programskem jeziku Python je:
-
-\begin{lstlisting}
-def fib(n):
-    if n == 0:
-        return 0
-    elif n == 1:
-        return 1
-    else:
-        return fib(n-1) + fib(n-2)
-\end{lstlisting}
-
-Izris te kode je lahko sicer tudi lepši, poskušaš lahko najti še
-primernejši način vključevanja kode v Pythonu oziroma v tvojem izbranem
-programskem jeziku v okolje \LaTeX{}.
-
-\section{Rezultati.}
-
-V tem poglavju podaš rezultate s kratkim (enoodstavčnim)
-komentarjem. Rezultate lahko prikažeš tudi v tabeli (primer je
-tabela~\ref{tab1}).
-
-Odstavke pri pisanju poročila v LaTeX-u ločiš tako, da pred novim
-odstavkom pustiš prazno vrstico. Tudi, če pišeš poročilo v kakšnem
-drugem urejevalniku, morajo odstavki biti vidno ločeni. To narediš z
-zamikanjem ali pa z dodatnim presledkom.
-
-\begin{table}[htbp]
-\caption{Atributi in njihove zaloge vrednosti.}
-\label{tab1}
-\begin{center}
-\begin{tabular}{llp{3cm}}
-\hline
-ime spremenljivke & definicijsko območje & opis \\
-\hline
-cena & [0, 500] & cena izdelka v EUR\\
-teža & [1, 1000] & teža izdelka v dag \\
-kakovost & [slaba|srednja|dobra] & kakovost izdelka \\
-\hline
-\end{tabular}
-\end{center}
-\end{table}
-
-Podajanje rezultati naj bo primerno strukturirano. Če ima naloga več
-podnalog, uporabi podpoglavja. Če bi želel poročati o rezultatih
-izčrpno in pri tem uporabiti vrsto tabel ali grafov, razmisli o
-varianti, kjer v tem poglavju prikažeš in komentiraš samo glavne
-rezultate, kakšne manj zanimive detajle pa vključite v prilogo (glej
-prilogi~\ref{app-res} in~\ref{app-code}).
-
-\section{Izjava o izdelavi domače naloge.}
-Domačo nalogo in pripadajoče programe sem izdelal sam.
-
-\appendix
-\appendixpage
-\section{\label{app-res}Podrobni rezultati poskusov.}
-
-Če je rezultatov v smislu tabel ali pa grafov v nalogi mnogo,
-predstavi v osnovnem besedilu samo glavne, podroben prikaz
-rezultatov pa lahko predstaviš v prilogi. V glavnem besedilu ne
-pozabi navesti, da so podrobni rezultati podani v prilogi.
-
-\section{\label{app-code}Programska koda.}
-
-Za domače naloge bo tipično potrebno kaj sprogramirati. Če ne bo od
-vas zahtevano, da kodo oddate posebej, to vključite v prilogo. Čisto
-za okus sem tu postavil nekaj kode, ki uporablja Orange
-(\url{http://www.biolab.si/orange}) in razvrščanje v skupine.
-
-
-\begin{lstlisting}
-import random
-import Orange
-
-data_names = ["iris", "housing", "vehicle"]
-data_sets = [Orange.data.Table(name) for name in data_names]
-
-print "%10s %3s %3s %3s" % ("", "Rnd", "Div", "HC")
-for data, name in zip(data_sets, data_names):
-    random.seed(42)
-    km_random = Orange.clustering.kmeans.Clustering(data, centroids = 3)
-    km_diversity = Orange.clustering.kmeans.Clustering(data, centroids = 3,
-        initialization=Orange.clustering.kmeans.init_diversity)
-    km_hc = Orange.clustering.kmeans.Clustering(data, centroids = 3,
-        initialization=Orange.clustering.kmeans.init_hclustering(n=100))
-    print "%10s %3d %3d %3d" % (name, km_random.iteration, \
-    km_diversity.iteration, km_hc.iteration)
-\end{lstlisting}
-

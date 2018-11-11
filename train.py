@@ -16,7 +16,11 @@ def createDir (dir):
 
 #adjust these accordingly:
 src = "C:ImgCache/Train/"
+stateName = "current"
 processes = 12
+kernelSize = 25
+lr = 0.00001
+lrExp = 0.85
 
 createDir(src)
 createDir("./States/current/")
@@ -25,13 +29,15 @@ if __name__ == '__main__':
 
     #multiple stages of learning, each slower
     lr = 0.00001
-    #print("First iteration, creating a new net.")
-    #train.execute(src, numProcesses = processes, lr = lr, createNew = True);
+    
+    print("First iteration, creating a new net.")
+    train.execute(src, numProcesses = processes, lr = lr, kernel = kernelSize,
+                  state = stateName, createNew = True);
     
     for i in range(18, 30):
     
-        lr *= 0.85;
+        lr *= lrExp;
         print("Iteration " + str(i) + ".")
-        train.execute(src, numProcesses = processes, lr = lr);
+        train.execute(src, numProcesses = processes, lr = lr, kernel = kernelSize);
     
     print("Done!")

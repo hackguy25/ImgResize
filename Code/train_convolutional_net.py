@@ -9,7 +9,7 @@ import os
 import sys
 
 def execute (sourceFolder, state = "current", debugPics = True, descriptive = True,
-             createNew = False, numProcesses = 4, lr = 0.001):
+             createNew = False, numProcesses = 4, lr = 0.001, kernel = 25):
 
     #creating the list of input pictures
     picList = [sourceFolder + i for i in os.listdir(sourceFolder) if i.find(".jpg") > -1];
@@ -42,14 +42,14 @@ def execute (sourceFolder, state = "current", debugPics = True, descriptive = Tr
         if descriptive: print("Creating new net.")
         dev = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if descriptive: print("Device: ", dev)
-        net, opt, crit = myNet.createNet(dev, learnRate = lr)
+        net, opt, crit = myNet.createNet(dev, learnRate = lr, kernel = kernel)
     else:
 
         #loading the parameters of the net from specified location
         if descriptive: print("Loading net parameters from " + state + ".");
         dev = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if descriptive: print("Device: ", dev)
-        net, opt, crit = myNet.loadNet("./States/" + state + "/", dev, learnRate = lr)
+        net, opt, crit = myNet.loadNet("./States/" + state + "/", dev, learnRate = lr, kernel = kernel)
 
     if descriptive:
         print("Learning rate:", lr)

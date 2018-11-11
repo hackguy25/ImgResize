@@ -14,13 +14,13 @@ def createDir (dir):
         print ("Error creating directory " + dir + ".")
         sys.exit(-1)
 
-def execute (sourceFolder, outFolder, state = "current", descriptive = True):
+def execute (sourceFolder, outFolder, state = "current", descriptive = True, kernel = 25):
 
     #creating an instance of the net, sent to the GPU
     if descriptive: print("Initializing the net.")
 
     dev = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net, opt, crit = myNet.loadNet("./States/" + state + "/", dev)
+    net, opt, crit = myNet.loadNet("./States/" + state + "/", dev, kernel = kernel)
 
     if descriptive: print("Initialized.")
 

@@ -14,10 +14,12 @@ def createDir (dir):
         sys.exit(-1)
 
 #adjust these accordingly:
+kernelSize = 25
+stateName = "current"
 src = "C:ImgCache/Test/"
 out = "./Pics/Out/"
 
 createDir(src)
 createDir(out)
 
-test.execute(src, out)
+test.execute(src, out, kernel = kernelSize, state = stateName)

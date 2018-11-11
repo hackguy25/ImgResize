@@ -21,6 +21,7 @@ processes = 12
 kernelSize = 25
 lr = 0.00001
 lrExp = 0.85
+iterations = 30
 
 createDir(src)
 createDir("./States/current/")
@@ -28,13 +29,12 @@ createDir("./States/current/")
 if __name__ == '__main__':
 
     #multiple stages of learning, each slower
-    lr = 0.00001
     
     print("First iteration, creating a new net.")
     train.execute(src, numProcesses = processes, lr = lr, kernel = kernelSize,
                   state = stateName, createNew = True);
     
-    for i in range(18, 30):
+    for i in range(2, iterations + 1):
     
         lr *= lrExp;
         print("Iteration " + str(i) + ".")

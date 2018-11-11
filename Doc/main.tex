@@ -37,28 +37,31 @@ backgroundcolor=\color{light-gray},
 
 \maketitle
 
+% 1
 \section{Uvod}
 
 Današnja fotografska oprema, od profesionalnih fotoaparatov do pametnih telefonov, je zmožna zajemati slike v visokih ločljivostih.
 Ker pogosto polna ločljivost slike ni potrebna, se večina slik pred shranjevanjem ali pošiljanjem zmanjša.
-To samo po sebi ne bi bil problem, če bi se za spreminjanje velikosti uporabljali algoritmi, ki bi skušali čim bolj ohraniti kvaliteto slike.
-Ampak zaradi minimizacije stroškov procesiranja in shranjevanja veliko aplikacij uporablja linearno interpolacijo, ki na račun kvalitete omogoča zelo
-	hitro spreminjanje velikost slike.
 
-S ciljem boljše povečave slik sem ustvaril konvolucijsko nevronsko mrežo, ki vzame linearno interpolirano, v vsako dimenzijo štirikrat povečano sliko
+To samo po sebi ne bi bil problem, če bi se za spreminjanje velikosti uporabljali algoritmi, ki bi skušali čim bolj ohraniti kvaliteto slike.
+Ampak zaradi minimizacije stroškov procesiranja in shranjevanja veliko aplikacij uporablja bilinearno interpolacijo\footnote{\url{
+	https://en.wikipedia.org/wiki/Bilinear\_interpolation}}, ki zelo hitro spremeni velikost slike na račun kvalitete.
+
+S ciljem boljše povečave slik sem ustvaril konvolucijsko nevronsko mrežo, ki vzame bilinearno interpolirano, v vsako dimenzijo štirikrat povečano sliko
 	in vrne izboljšano verzijo z manj artifakti povečave.
 V tem besedilu bom predstavil delovanje nevronske mreže, njeno obliko, programsko okolje, ki sem ga uporabil, in množico slik, uporabljeno
-	pri treniranju in preizkušanju mreže.
+	pri učenju in preizkušanju mreže.
 
 Pri načrtovanju mreže sem se usmerjal po raziskavah s podobnim namenom.\cite{intel1, intel2, intel3}
-V večini primerov je šlo za večslojne nevronske mreže, jaz sem se pa omejil na en sloj s knovolucijo.
+V večini primerov je šlo za večslojne nevronske mreže, jaz sem se pa omejil na en sloj s konvolucijo.
 
-Rezultati so sprejemljivi, mreža je zmožna očitno izboljšati kvaliteto slike v primerjavi z linearno interpolacijo samo.
+Rezultati so sprejemljivi, mreža je zmožna očitno izboljšati kvaliteto slike v primerjavi z bilinearno interpolacijo samo.
 
+% 2
 \section{Definicije}
 
-V tem besedilu so večkrat uporabljeni izrazi \emph{konvolucija}, \emph{aktivacijska funkcija} in \emph{konvolucijska nevronska mreža}.
-Definirajmo jih.
+%V tem besedilu so večkrat uporabljeni izrazi \emph{konvolucija}, \emph{aktivacijska funkcija} in \emph{konvolucijska nevronska mreža}.
+%Definirajmo jih.
 
 \subsection{Konvolucija}
 
@@ -120,18 +123,18 @@ Nekaj primerov aktivacijskih funkcij predstavljajo usmerjena linearna enota (ReL
 \begin{equation*} 
 f(x) = \begin{cases}
 	0 & \text{za } x < 0 \\
-	x & \text{za } x \ge 0
+	x & \text{za } x \ge 0,
 \end{cases}
 \end{equation*}
 sigmoid:
 \begin{equation*} 
-f(x) = \frac{1}{1 + e^{-x}}
+f(x) = \frac{1}{1 + e^{-x}},
 \end{equation*}
 in binarna stopnica:
 \begin{equation*} 
 f(x) = \begin{cases}
 	0 & \text{za } x < 0 \\
-	1 & \text{za } x \ge 0
+	1 & \text{za } x \ge 0.
 \end{cases}
 \end{equation*}
 
@@ -150,8 +153,8 @@ Njena oblika se zgleduje po strukturi živalskih možganov.\cite{ann_def_2}
 Podobno se tudi ``uči'': Za vsak učni primer se prilagodi glede na razliko med njenim in ciljnim izhodom.
 
 Prednost nevronske mreže v primerjavi s standardnimi algoritmi je, da za gradnjo mreže postopka iskanja rešitve ni potrebno točno definirati.
-Na razpolago moramo imeti le dovolj velik nabor parov vhodnih podatkov in pripadajočih izhodov - \emph{učno množico} - in dovolj računske moči.
-Posledično lahko z njimi rešujemo probleme, ki so preveč kompleksni za direktno algoritmično reševanje ali pa algoritma sploh ne moremo definirati,
+Na razpolago moramo imeti le dovolj velik nabor parov vhodnih podatkov in pripadajočih izhodov - \emph{učno množico} - ter dovolj računske moči.
+Posledično lahko z njimi rešujemo probleme, ki so preveč kompleksni za direktno algoritmično reševanje ali ko algoritma sploh ne moremo definirati,
 	na primer klasifikacija slik, aproksimacija težko izračunljivih funkcij, regresijska analiza \ldots
 
 Slabost nevronske mreže je njena nenatančnost.
@@ -163,16 +166,16 @@ Poleg tega za doseganje dobrih rezultatov zahtevajo ogromne, raznolike učne mno
 \emph{Konvolucijske nevronske mreže} so eden izmed tipov usmerjenih nevronskih mrež.
 Navadno so sestavljene iz več slojev, kjer so posamezni sloji konvolucije, aktivacijske funkcije, združevalne funkcije ali
 	\emph{polno povezani sloji} - sloji, pri katerih je vsak nevron vhoda uteženo povezan z vsakim nevronom izhoda.
+Združevalne funkcije, kot so max$(A)$, min$(A)$ in avg$(A)$ zmanjšajo količino vmesnih podatkov, kar poenostavi proces učenja.\cite{cnn_pool}
+
 Konvolucije emulirajo odziv nevronov na lastnosti vhodnih stimulusov, podobno kot ljudje bel krog na temnem ozadju zaznamo kot
 	vir svetlobe.\cite{cnn_conv}
-Združevalne funkcije, kot so max$(A)$, min$(A)$ in avg$(A)$ zmanjšajo količino vmesnih podatkov, kar poenostavi proces učenja.\cite{cnn_pool}
 
 Pravilno načrtovane konvolucijske nevronske mreže potrebujejo relativno malo preprocesnega dela, kar omogoča hiter in enostaven razvoj programov,
 	ki jih uporabljajo.
 
+% 3
 \section{Oblika}
-
-Poglejmo si obliko ustvarjene nevronske mreže (v nadaljevanju: mreža) in format vhodnih podatkov.
 
 \subsection{Načrt mreže}
 
@@ -187,7 +190,26 @@ clamp(x) = \begin{cases}
 \end{equation*}
 Tu nelinearnost aktivacijske funkcije ne igra posebne vloge, pomaga pa omejiti izhodno vrednost v dopustno območje števil, ki jih lahko zaokrožimo v
 	8-bitno celo število.
-Za vhod vzame povečano sliko dimenzij $(\text{širina}, \text{višina})$, vrne pa sliko dimenzij $(\text{širina} - k + 1, \text{višina} - k + 1)$.
+
+Za vhod vzame povečano sliko dimenzij $(\text{širina}, \text{višina})$, vrne pa sliko dimenzij $(\text{širina} - k + 1,\\ \text{višina} - k + 1)$.
+
+Izguba se računa s funkcijo \emph{zglajene linearne izgube}, definirane kot:
+\begin{equation*} 
+\text{izguba}(\text{izhod}, \text{cilj}) = \frac{1}{n} \sum_{i = 1}^{n} smooth(\text{cilj}_i - \text{izhod}_i),
+\end{equation*}
+kjer je funkcija $smooth$ definirana kot:
+\begin{equation*} 
+smooth(x) = \begin{cases}
+	0.5 x^2 & \text{za } |x| < 1 \\
+	|x| - 0.5 & \text{sicer}.
+\end{cases}
+\end{equation*}
+Ta funkcija ni toliko občutljiva na ekstremne primere kot MSE, ne potrebuje toliko računskega časa kot RMSE in da boljše rezultate kot vsota razdalj,
+	ko se mreža približuje optimumu.\cite{smooth_l1}
+
+Za optimizacijo se uporablja algoritem Adam.
+Ta je zelo podoben gradientnemu spustu, le da z uporabo dodatnih parametrov pohitri konvergenco k optimumu.\cite{adam}
+
 Vse računanje poteka v številih s plavajočo vejico v enojni natančnosti, \texttt{float32}.
 
 \subsection{Oblika podatkov}
@@ -217,11 +239,12 @@ Ker sem hotel izvajati učenje na grafični kartici, sem namestil tudi gonilnike
 Za delo s tenzorji sem uporabil knjižnico \texttt{numpy}, za delo s slikami pa knjižnico \texttt{scikit\_image}.
 
 Vsa izvorna koda je dosegljiva na javnem repozitoriju na naslovu \url{https://github.com/hackguy25/ImgResize}.
+Tam so zapisane tudi specifične verzije knjižnic in okolja.
 
 \section{Učenje}
 
 Mrežo sem učil s pomočjo skripte \texttt{train.py}.
-Vsako sliko sem naložil z diska, skrčil s faktorjem 4, povečal s faktorjem 4 z linearno interpolacijo in jo skupaj z originalom podal mreži.
+Vsako sliko sem naložil z diska, skrčil s faktorjem 4, povečal s faktorjem 4 z bilinearno interpolacijo in jo skupaj z originalom podal mreži.
 Ta je na grafični kartici izvedla učni korak z učno hitrostjo $lr$ in vrnila napako pri trenutni sliki.
 To napako sem izpisal na standardnem izhodu za lažje sledenje napredku.
 
@@ -229,7 +252,7 @@ Učenje sem izvajal v iteracijah.
 V vsaki iteraciji sem na mreži izvedel en korak z vsako izmed 580 slik iz učne množice.
 Po vsaki iteraciji sem zmanjšal hitrost učenja, $lr$, tako da so posamezne slike le minimalno pripomogle k neželenemu odstopanju.
 
-Vse učenje sem izvajal na mojem osebnem računalniku s procesorjem AMD Ryzen Threadripper
+Vse učenje sem izvajal na mojem osebnem računalniku s procesorjem AMD Ryzen Thread\-rip\-per
 	1920X,\footnote{\url{https://www.amd.com/en/products/cpu/amd-ryzen-threadripper-1920x}}
 	32GB pomnilnika in grafično kartico Nvidia 1080 Ti.\footnote{\url{https://www.nvidia.com/en-gb/geforce/products/10series/geforce-gtx-1080-ti/}}
 
@@ -250,6 +273,7 @@ lr = 0.00001 \cdot 0,85^{i - 1}
 \end{equation*}
 
 Kljub večjemu jedru konvolucije druge različice učenje ni potekalo občutno počasneje.
+
 Pri obeh različicah sem za izvedbo ene iteracije potreboval povprečno 12 minut.
 Za učenje prve različice sem porabil približno 3 ure, za učenje druge pa približno 6.
 Povprečna poraba energije računalnika med učenjem je nihala med 400 in 450W, torej sem za učenje obeh različic porabil nekje med 3,5 in 4 kWh električne
@@ -259,7 +283,7 @@ Povprečna poraba energije računalnika med učenjem je nihala med 400 in 450W, 
 
 Obe različici mreže sem testiral na 64 slikah iz testne množice.
 Slike sem predhodno skrčil na četrtino velikosti v vsako dimenzijo, nato pa jih obdelal z obema različicama mreže.
-Naslednje slika prikazuje nekaj primerov povečanih slik, v primerjavi z bilinearno in bikubično interpolacijo.
+Slika 3 prikazuje nekaj primerov povečanih slik, v primerjavi z bilinearno in bikubično interpolacijo.
 
 \begin{figure}[htbp]
 \begin{center}
@@ -322,6 +346,12 @@ Kljub tem pomanjkljivostim mislim, da je bila izdelava mreže uspeh.
 
 \bibitem{cnn_pool} Alex Krizhevsky \emph{et al}. (2012). ImageNet Classification with Deep Convolutional Neural Networks.
 	\emph{NIPS 2012}. [Online] Dosegljivo: \url{http://www.image-net.org/challenges/LSVRC/2012/supervision.pdf}. [Dostopano \today].
+
+\bibitem{smooth_l1} Ross Girshick. (2015). Fast R-CNN. \emph{Microsoft Research}. [Online] Dosegljivo: \url{https://arxiv.org/pdf/1504.08083.pdf}.
+	[Dostopano \today].
+
+\bibitem{adam} Diederik P. Kingma, Jimmy Lei Ba. (2015). Adam: A Method for Stochastic Optimization.
+	\emph{International Conference for Learning Representations}. [Online] Dosegljivo: \url{https://arxiv.org/pdf/1412.6980.pdf}. [Dostopano \today].
 
 \bibitem{datasets} \emph{Datasets}. Deep Learning. [Online] Dosegljivo: \url{http://deeplearning.net/datasets/}. [Dostopano \today].
 
